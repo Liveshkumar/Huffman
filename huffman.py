@@ -1,27 +1,133 @@
 #!/usr/local/bin/python3
 import sys
 import argparse
-import shutil
 
-
+class node:
+    def __init__(self,char,freq,left=None, right=None):
+        self.char= char
+        self.freq= freq
+        self.left= left
+        self.right= right
+        self.code=''
+dict={}
+decode_dict={}
+def get_frequency(text):
+	for i in text:
+		if i not in dict:
+			dict[i]=0
+		dict[i]+=1
+encode_bit={}
+def generate_bit(node, val=''):
+	bit = val + str(node.code)
+	if(node.left):
+		generate_bit(node.left, bit)
+	if(node.right):
+		generate_bit(node.right, bit)
+	if(not node.left and not node.right):
+		encode_bit[node.char]=bit
+def get_encode(txt):
+	encode_text=""
+	for i in txt:
+		encode_text+=(encode_bit[i])
+		#print(i,encode_bit[i],end=" ")
+	return encode_text
+def padding(encoded_txt):
+	extra_pad=8-len(encoded_txt)%8
+	print(extra_pad)
+	for i in range(extra_pad):
+		encoded_txt += "0"
+	padding_val="{0:08b}".format(extra_pad)
+	encoded_txt=padding_val+encoded_txt
+	return encoded_txt
 def encode(input_file, output_file):
 	print("encoding ", input_file, output_file)
-	# write code here
+	file1 = open(input_file,"r")
+	text=file1.read()
+	#text=text.rstrip()
+	get_frequency(text)
+	BST=[]
+	for i in dict:
+		BST.append(node(i,dict[i]))
+	while(len(BST)>1):
+		nodes = sorted(BST, key=lambda x: x.freq)
+		left=nodes[0]
+		right=nodes[1]
+		left.code=0
+		right.code=1
+		newNode = node(left.char+right.char,left.freq+right.freq,  left, right)
+		BST.remove(left)
+		BST.remove(right)
+		BST.append(newNode)
 
-	# simply copying the file to bypass the actual test.
-	# remove the below lines.
-	if input_file != "" and output_file != "":
-		shutil.copyfile(input_file, output_file)
+	generate_bit(BST[0])
 
+	encode_text=get_encode(text)
+	#print(encode_text)
+	encoded_txt=padding(encode_text)
+	#print(len(encoded_txt)%8)
+	characters = ""
 
+	for i in encode_bit:
+		decode_dict[encode_bit[i]]=i
+	# storing length of encode bit + encode bit values + encoded chars
+	file3=open("dict.txt",'w')
+	file3.write(str(decode_dict))
+	file2=open(output_file,'w')
+	file2.write(encoded_txt)
+	file2.close()
+	file1.close()
+
+# deocde functions	
+def get_padding_val(text):
+	char=ord(text[0])
+	pad_val=int(char)
+	#print(pad_val)
+	return pad_val
+def decode_char(pad_Val,text):
+	decode_text=""
+	for i in text[pad_Val:]:
+		char=ord(i)
+		#print(char,end =" ")
+		#c=bin(char).replace("0b", "")
+		c="{0:08b}".format(char)
+		# while (len(c)) <8 :
+		# 	c='0'+c
+		decode_text+=c
+	return decode_text
+def removed_padding(decode_text,padval):
+	decode_text=decode_text[:-1*padval]
+	return decode_text
+
+def decode_huffambit(decode_text,decode_dict):
+	ch=""
+	encode_char=""
+	for i in decode_text:
+		ch+=i
+		if ch in decode_dict:
+			encode_char+=decode_dict[ch]
+			ch=""
+	print(encode_char)
+	return encode_char
 def decode(input_file, output_file):
 	print("decoding ", input_file, output_file)
-	# write code here
-
-	# simply copying the file to bypass the actual test.
-	# remove the below lines.
-	if input_file != "" and output_file != "":
-		shutil.copyfile(input_file, output_file)
+	file1=open(input_file,'r')
+	file2=open(output_file,'w')
+	file3=open("dict.txt",'r')
+	dict=file3.read()
+	text=file1.read()
+	dict=eval(dict)
+	print(dict)
+	# getting the length of decode char
+	pad_val=get_padding_val(text)
+	print(pad_val)
+	decode_text=removed_padding(text,pad_val)
+	# decode_text=decode_char(1,decode_text)
+	encode_char=decode_huffambit(decode_text,dict)
+	print(encode_char)
+	file2.write(encode_char)
+	file2.close()
+	file3.close()
+	file1.close()
 
 
 def get_options(args=sys.argv[1:]):
